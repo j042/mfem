@@ -521,6 +521,11 @@ set(MFEM_INSTALL_DIR ${CMAKE_INSTALL_PREFIX} CACHE PATH
 
 # Declaring the library
 mfem_add_library(mfem ${SOURCES} ${HEADERS} ${MASTER_HEADERS})
+
+# for easy "mfem-iga" build
+target_include_directories(mfem INTERFACE $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>)
+target_compile_options(mfem PRIVATE -fPIC)
+
 # message(STATUS "TPL_LIBRARIES = ${TPL_LIBRARIES}")
 target_link_libraries(mfem PUBLIC ${TPL_LIBRARIES})
 if (MINGW)
