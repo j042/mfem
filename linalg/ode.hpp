@@ -513,10 +513,11 @@ protected:
    int  nstate;
 
    void SetRhoInf(double rho_inf);
-   void PrintProperties(std::ostream &out = mfem::out);
 public:
 
    GeneralizedAlphaSolver(double rho = 1.0) { SetRhoInf(rho); };
+
+   void PrintProperties(std::ostream &out = mfem::out);
 
    void Init(TimeDependentOperator &f_) override;
 
