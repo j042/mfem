@@ -2018,18 +2018,13 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
 
       // GetElementIJK() expects dim-sized Array<int>
       Array<int> dim_matching_ijk(dim);
-      const int spline_dim = dim; // passed to lambda instead of "this"
-      auto get_element_ijk = [&ijk, &mesh, &dim_matching_ijk, spline_dim](
-                                 const int element) -> void {
-         mesh.NURBSext->GetElementIJK(element, dim_matching_ijk);
-         for (int i = 0; i < spline_dim; ++i) {
-            ijk[i] = dim_matching_ijk[i];
-         }
-      };
-
       for (auto elem : patchElements[p])
       {
-         get_element_ijk(elem);
+         mesh.NURBSext->GetElementIJK(elem, dim_matching_ijk);
+         for (int i = 0; i < dim; ++i)
+         {
+            ijk[i] = dim_matching_ijk[i];
+         }
          MFEM_VERIFY(ijk2elem(ijk[0], ijk[1], ijk[2]) == -1, "");
          ijk2elem(ijk[0], ijk[1], ijk[2]) = elem;
       }
@@ -2041,7 +2036,8 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
       for (int d=0; d<max_dim; ++d)
       {
          // if dim is smaller than 3, allocate array with 1 element with index 0
-         if ((d + 1) - dim > 0) {
+         if ((d + 1) - dim > 0)
+         {
             patchRules1D_KnotSpan[p][d].SetSize(1);
             patchRules1D_KnotSpan[p][d] = 0;
             continue;
