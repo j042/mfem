@@ -1976,6 +1976,9 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
    MFEM_VERIFY(mesh.NURBSext, "");
    MFEM_VERIFY(mesh.Dimension() == dim, "");
 
+   // Containers are allocated for max support dim
+   const int max_dim = 3;
+
    pointToElem.resize(npatches);
    patchRules1D_KnotSpan.resize(npatches);
 
@@ -1987,16 +1990,15 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
       patchElements[mesh.NURBSext->GetElementPatch(e)].push_back(e);
    }
 
-   Array<int> ijk(3);
-   Array<int> maxijk(3);
-   Array<int> np(3);  // Number of points in each dimension
+   Array<int> ijk(max_dim);
+   Array<int> maxijk(max_dim);
+   Array<int> np(max_dim);  // Number of points in each dimension
    ijk = 0;
 
    Array<const KnotVector*> pkv;
-
    for (int p=0; p<npatches; ++p)
    {
-      patchRules1D_KnotSpan[p].resize(dim);
+      patchRules1D_KnotSpan[p].resize(max_dim);
 
       // For each patch, get the range of ijk.
       mesh.NURBSext->GetPatchKnotVectors(p, pkv);
@@ -2014,9 +2016,20 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
       Array3D<int> ijk2elem(maxijk[0], maxijk[1], maxijk[2]);
       ijk2elem = -1;
 
+      // GetElementIJK() expects dim-sized Array<int>
+      Array<int> dim_matching_ijk(dim);
+      const int spline_dim = dim; // passed to lambda instead of "this"
+      auto get_element_ijk = [&ijk, &mesh, &dim_matching_ijk, spline_dim](
+                                 const int element) -> void {
+         mesh.NURBSext->GetElementIJK(element, dim_matching_ijk);
+         for (int i = 0; i < spline_dim; ++i) {
+            ijk[i] = dim_matching_ijk[i];
+         }
+      };
+
       for (auto elem : patchElements[p])
       {
-         mesh.NURBSext->GetElementIJK(elem, ijk);
+         get_element_ijk(elem);
          MFEM_VERIFY(ijk2elem(ijk[0], ijk[1], ijk[2]) == -1, "");
          ijk2elem(ijk[0], ijk[1], ijk[2]) = elem;
       }
@@ -2025,8 +2038,14 @@ void NURBSMeshRules::Finalize(Mesh const& mesh)
       // It is assumed here that the NURBSFiniteElement kv the same as the
       // patch kv.
 
-      for (int d=0; d<dim; ++d)
+      for (int d=0; d<max_dim; ++d)
       {
+         // if dim is smaller than 3, allocate array with 1 element with index 0
+         if ((d + 1) - dim > 0) {
+            patchRules1D_KnotSpan[p][d].SetSize(1);
+            patchRules1D_KnotSpan[p][d] = 0;
+            continue;
+         }
          patchRules1D_KnotSpan[p][d].SetSize(patchRules1D(p,d)->Size());
 
          for (int r=0; r<patchRules1D(p,d)->Size(); ++r)
